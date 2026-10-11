@@ -44,7 +44,7 @@ FishUI.Window {
     readonly property color separatorColor: Qt.rgba(FishUI.Theme.textColor.r, FishUI.Theme.textColor.g,
                                                      FishUI.Theme.textColor.b, 0.08)
 
-    component Card: FishUI.RoundedRectangle {
+    component Card: Rectangle {
         default property alias rows: _rows.data
 
         Layout.fillWidth: true
@@ -203,7 +203,7 @@ FishUI.Window {
             }
 
             SettingRow {
-                text: qsTr("Font Size")
+                text: qsTr("Font Size")ma
 
                 FishUI.Slider {
                     id: fontSizeSlider

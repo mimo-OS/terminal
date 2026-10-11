@@ -102,7 +102,6 @@ FishUI.Window {
         id: _exitPromptComponent
 
         ExitPromptDialog {
-            parentWindow: root
             x: root.x + Math.round((root.width - width) / 2)
             y: root.y + Math.round((root.height - height) / 2)
         }
@@ -112,7 +111,6 @@ FishUI.Window {
         id: _settingsDialogComponent
 
         SettingsDialog {
-            parentWindow: root
         }
     }
 
@@ -125,10 +123,8 @@ FishUI.Window {
             property var pendingAction: null
             property int lineCount: 0
 
-            parentWindow: root
             x: root.x + Math.round((root.width - width) / 2)
             y: root.y + Math.round((root.height - height) / 2)
-            showOnCompleted: false
             title: lineCount > 1 ? qsTr("Paste %1 lines?").arg(lineCount) : qsTr("Paste this line and press Enter?")
             confirmText: qsTr("Paste")
 
@@ -217,13 +213,13 @@ FishUI.Window {
             }
         }
 
-        FishUI.HeaderButton {
+        FishUI.RoundImageButton {
             id: _newTabButton
             anchors.right: parent.right
-            anchors.rightMargin: root.windowButtonsSpacing
+            anchors.rightMargin: 8
             anchors.verticalCenter: parent.verticalCenter
-            size: 32
-            artwork: "add"
+            size: 28
+            source: "qrc:/FishUI/images/" + (root.chromeDark ? "dark" : "light") + "/add.svg"
             onClicked: root.openNewTab()
         }
     }

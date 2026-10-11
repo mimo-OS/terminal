@@ -33,7 +33,6 @@ FishUI.ConfirmDialog {
     }
     onRejected: pendingAction = null
 
-    showOnCompleted: false
     title: qsTr("Process is running, are you sure you want to quit?")
     cancelText: qsTr("Cancel")
     confirmText: qsTr("OK")

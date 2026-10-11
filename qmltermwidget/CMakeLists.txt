@@ -74,7 +74,7 @@ target_link_libraries(cutefishqmltermwidget
     Qt6::Qml
     Qt6::Quick
     Qt6::Widgets
-    Cutefish::Application
+    Cutefish::Applications
 )
 
 install(TARGETS cutefishqmltermwidget DESTINATION ${INSTALL_QMLDIR}/Cutefish/TermWidget)

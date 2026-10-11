@@ -27,7 +27,6 @@
 #include <QCommandLineParser>
 #include <QDir>
 
-#include "cutefishapplication.h"
 #include "processhelper.h"
 #include "utils.h"
 #include "fonts.h"
@@ -35,7 +34,7 @@
 int main(int argc, char *argv[])
 {
     QApplication app(argc, argv);
-    Cutefish::Application::prepare();
+    app.setOrganizationName(QStringLiteral("cutefishos"));
     app.setWindowIcon(QIcon::fromTheme("terminal"));
 
     // Everything after -e is the command and its own options, so it is split

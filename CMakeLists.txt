@@ -12,10 +12,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(QT Core Gui Network Qml Quick Widgets DBus LinguistTools)
 find_package(Qt6 REQUIRED ${QT})
-find_package(CutefishFramework REQUIRED COMPONENTS Application)
+
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../cutefish-framework/applications
+                 ${CMAKE_CURRENT_BINARY_DIR}/cutefish-framework-applications-build)
 
 # Where QML modules go, so the terminal widget plugin lands next to FishUI.
-find_program(QT_PATHS_EXECUTABLE NAMES qtpaths6 REQUIRED)
+find_program(QT_PATHS_EXECUTABLE NAMES qtpaths6 qtpaths PATHS /usr/lib/qt6/bin REQUIRED)
 execute_process(COMMAND ${QT_PATHS_EXECUTABLE} -query QT_INSTALL_QML
     OUTPUT_VARIABLE INSTALL_QMLDIR
     OUTPUT_STRIP_TRAILING_WHITESPACE
@@ -46,7 +48,7 @@ target_link_libraries(${PROJECT_NAME}
         Qt6::Quick
         Qt6::Widgets
         Qt6::DBus
-        Cutefish::Application
+        Cutefish::Applications
 )
 
 file(GLOB TS_FILES translations/*.ts)
