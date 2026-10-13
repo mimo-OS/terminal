@@ -70,9 +70,9 @@ bool ProcessHelper::openFileManager(const QString &url)
     if (iface.lastError().isValid())
         return false;
 
-    iface.call("ShowFolders",
-               QStringList() << QUrl::fromLocalFile(url).toString(),
-               QString::number(QApplication::applicationPid()));
+    iface.asyncCall(QStringLiteral("ShowFolders"),
+                    QStringList() << QUrl::fromLocalFile(url).toString(),
+                    QString::number(QApplication::applicationPid()));
 
     return true;
 }
@@ -86,9 +86,9 @@ bool ProcessHelper::showInFileManager(const QString &path)
     if (iface.lastError().isValid())
         return false;
 
-    iface.call("ShowItems",
-               QStringList() << QUrl::fromLocalFile(path).toString(),
-               QString::number(QApplication::applicationPid()));
+    iface.asyncCall(QStringLiteral("ShowItems"),
+                    QStringList() << QUrl::fromLocalFile(path).toString(),
+                    QString::number(QApplication::applicationPid()));
 
     return true;
 }
