@@ -18,11 +18,11 @@ Item {
     readonly property real minimumTabWidth: 96
     readonly property real tabWidth: count > 0 ? Math.max(minimumTabWidth, Math.min(maximumTabWidth, width / count)) : 0
 
-    readonly property color trackColor: darkMode ? Qt.rgba(1, 1, 1, 0.06) : Qt.rgba(0, 0, 0, 0.045)
+    readonly property color trackColor: darkMode ? Qt.rgba(1, 1, 1, 0.06) : Qt.rgba(0, 0, 0, 0.05)
     // Light schemes are not always white; a translucent pill lifts off any of them.
-    readonly property color selectedColor: darkMode ? Qt.rgba(1, 1, 1, 0.13) : Qt.rgba(1, 1, 1, 0.8)
-    readonly property color hoverColor: Qt.rgba(textColor.r, textColor.g, textColor.b, 0.05)
-    readonly property color separatorColor: Qt.rgba(textColor.r, textColor.g, textColor.b, 0.12)
+    readonly property color selectedColor: darkMode ? Qt.rgba(1, 1, 1, 0.13) : Qt.rgba(1, 1, 1, 0.85)
+    readonly property color hoverColor: darkMode ? Qt.rgba(1, 1, 1, 0.06) : Qt.rgba(0, 0, 0, 0.05)
+    readonly property color separatorColor: darkMode ? Qt.rgba(1, 1, 1, 0.12) : Qt.rgba(0, 0, 0, 0.10)
     readonly property color dimTextColor: Qt.rgba(textColor.r, textColor.g, textColor.b, 0.6)
 
     // The tab being dragged, the slot it would drop into, and where it is drawn.
@@ -115,7 +115,7 @@ Item {
                                                        : tab.hovered ? control.hoverColor : "transparent"
                     // Light mode raises a white pill on a pale track; a hairline keeps its edge.
                     border.width: (tab.selected || tab.dragged) && !control.darkMode ? 1 : 0
-                    border.color: Qt.rgba(0, 0, 0, 0.06)
+                    border.color: Qt.rgba(0, 0, 0, 0.08)
                 }
 
                 // Between two resting tabs only; a raised or hovered pill has its own edge.
@@ -262,9 +262,9 @@ Item {
                     Rectangle {
                         anchors.fill: parent
                         radius: height / 2
-                        color: _closeArea.pressed ? Qt.rgba(control.textColor.r, control.textColor.g,
-                                                            control.textColor.b, 0.16)
-                                                  : control.hoverColor
+                        color: _closeArea.pressed
+                               ? (control.darkMode ? Qt.rgba(1, 1, 1, 0.20) : Qt.rgba(0, 0, 0, 0.15))
+                               : (control.darkMode ? Qt.rgba(1, 1, 1, 0.10) : Qt.rgba(0, 0, 0, 0.08))
                         visible: _closeArea.containsMouse
                     }
 

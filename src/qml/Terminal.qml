@@ -461,7 +461,7 @@ Item {
     }
 
     // Overlays the right margin; shown while scrolling or under the pointer.
-    FishUI.ScrollBar {
+    ScrollBar {
         id: _scrollbar
 
         readonly property int totalLines: _terminal.lines + _terminal.scrollbarMaximum - _terminal.scrollbarMinimum
@@ -469,8 +469,12 @@ Item {
         anchors.right: parent.right
         anchors.top: _terminal.top
         anchors.bottom: _terminal.bottom
+        anchors.rightMargin: 2
+        anchors.topMargin: 2
+        anchors.bottomMargin: 2
+        width: 8
         orientation: Qt.Vertical
-        darkMode: root.chromeDark
+        property bool darkMode: root.chromeDark
         active: hovered || pressed || _scrollActivity.running
         size: totalLines > 0 ? _terminal.lines / totalLines : 1
         position: totalLines > 0 ? (_terminal.scrollbarCurrentValue - _terminal.scrollbarMinimum) / totalLines : 0
@@ -488,6 +492,21 @@ Item {
         Connections {
             target: _terminal
             function onScrollbarValueChanged() { _scrollActivity.restart() }
+        }
+
+        contentItem: Rectangle {
+            implicitWidth: 6
+            radius: 3
+            color: _scrollbar.pressed
+                   ? (root.chromeDark ? Qt.rgba(1, 1, 1, 0.55) : Qt.rgba(0, 0, 0, 0.50))
+                   : (_scrollbar.hovered
+                      ? (root.chromeDark ? Qt.rgba(1, 1, 1, 0.40) : Qt.rgba(0, 0, 0, 0.35))
+                      : (root.chromeDark ? Qt.rgba(1, 1, 1, 0.25) : Qt.rgba(0, 0, 0, 0.20)))
+            opacity: _scrollbar.active ? 1.0 : 0.0
+
+            Behavior on opacity {
+                NumberAnimation { duration: 180 }
+            }
         }
     }
 

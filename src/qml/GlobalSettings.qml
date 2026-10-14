@@ -36,7 +36,11 @@ Settings {
     property int scrollbackLines: 10000
     property bool visualBell: false
     property bool confirmMultilinePaste: true
-    // A bundled color scheme, by file name.
+    // 0: Follow System, 1: Light, 2: Dark
+    property int themeMode: 0
+    property string colorSchemeLight: "TokyoNight-Day"
+    property string colorSchemeDark: "TokyoNight"
+    // Backward-compatible or currently active scheme
     property string colorScheme: "TokyoNight"
 
     property double opacity: 0.85

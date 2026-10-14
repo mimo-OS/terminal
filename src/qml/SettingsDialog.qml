@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Window
+import QtQuick.Controls
 import FishUI 1.0 as FishUI
 
 FishUI.Window {
@@ -29,16 +30,14 @@ FishUI.Window {
 
     background.color: FishUI.Theme.backgroundColor
 
-    // Bundled schemes, by file name. The labels are fixed: a model that changes
-    // after creation resets the combo box.
-    readonly property var themeNames: ["Catppuccin-Latte", "Catppuccin-Mocha", "Dracula",
-                                       "Gruvbox-Dark", "Gruvbox-Light", "Nord", "One-Dark", "One-Light",
-                                       "Solarized", "SolarizedLight", "TokyoNight", "TokyoNight-Day",
-                                       "Tomorrow-Night"]
-    readonly property var themeLabels: ["Catppuccin Latte", "Catppuccin Mocha", "Dracula",
-                                        "Gruvbox Dark", "Gruvbox Light", "Nord", "One Dark", "One Light",
-                                        "Solarized Dark", "Solarized Light", "Tokyo Night", "Tokyo Night Day",
-                                        "Tomorrow Night"]
+    readonly property var modeLabels: [qsTr("Follow System"), qsTr("Light"), qsTr("Dark")]
+
+    readonly property var lightThemeNames: ["TokyoNight-Day", "One-Light", "Catppuccin-Latte", "Gruvbox-Light", "SolarizedLight"]
+    readonly property var lightThemeLabels: ["Tokyo Night Day", "One Light", "Catppuccin Latte", "Gruvbox Light", "Solarized Light"]
+
+    readonly property var darkThemeNames: ["TokyoNight", "One-Dark", "Catppuccin-Mocha", "Dracula", "Gruvbox-Dark", "Nord", "Solarized", "Tomorrow-Night"]
+    readonly property var darkThemeLabels: ["Tokyo Night", "One Dark", "Catppuccin Mocha", "Dracula", "Gruvbox Dark", "Nord", "Solarized Dark", "Tomorrow Night"]
+
     readonly property var schemeInfo: root.colorSchemeInfo
 
     readonly property color separatorColor: Qt.rgba(FishUI.Theme.textColor.r, FishUI.Theme.textColor.g,
@@ -68,7 +67,7 @@ FishUI.Window {
         default property alias content: _content.data
 
         Layout.fillWidth: true
-        implicitHeight: 44
+        implicitHeight: visible ? 44 : 0
 
         FishUI.Label {
             id: _label
@@ -93,7 +92,7 @@ FishUI.Window {
             anchors.rightMargin: 14
             height: 1
             color: control.separatorColor
-            visible: !parent.last
+            visible: !parent.last && parent.visible
         }
     }
 
@@ -142,11 +141,11 @@ FishUI.Window {
                 textFormat: Text.StyledText
                 font.family: settings.fontName
                 font.pointSize: settings.fontPointSize
-                color: control.schemeInfo.foreground ? control.schemeInfo.foreground : FishUI.Theme.textColor
+                color: control.schemeInfo.foreground ? control.schemeInfo.foreground : (root.chromeDark ? "#C0CAF5" : "#3760BF")
                 text: {
                     const colors = control.schemeInfo.colors || []
-                    const green = colors.length ? colors[2] : FishUI.Theme.textColor
-                    const blue = colors.length ? colors[4] : FishUI.Theme.textColor
+                    const green = colors.length ? colors[2] : (root.chromeDark ? "#9ece6a" : "#587539")
+                    const blue = colors.length ? colors[4] : (root.chromeDark ? "#7aa2f7" : "#2e7de9")
                     return "<font color=\"" + green + "\">user@cutefish</font> "
                             + "<font color=\"" + blue + "\">~</font> $ ls<br>"
                             + "<font color=\"" + blue + "\">Documents&nbsp;&nbsp;Pictures</font>&nbsp;&nbsp;notes.txt"
@@ -177,15 +176,49 @@ FishUI.Window {
 
         Card {
             SettingRow {
-                text: qsTr("Theme")
+                text: qsTr("Mode")
 
                 FishUI.ComboBox {
                     anchors.verticalCenter: parent.verticalCenter
                     width: 200
-                    model: control.themeLabels
-                    currentIndex: Math.max(0, control.themeNames.indexOf(root.colorScheme))
+                    model: control.modeLabels
+                    currentIndex: settings.themeMode
 
-                    onActivated: (index) => settings.colorScheme = control.themeNames[index]
+                    onActivated: (index) => settings.themeMode = index
+                }
+            }
+
+            SettingRow {
+                text: settings.themeMode === 0 ? qsTr("Light Theme") : qsTr("Theme")
+                visible: settings.themeMode !== 2
+
+                FishUI.ComboBox {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 200
+                    model: control.lightThemeLabels
+                    currentIndex: Math.max(0, control.lightThemeNames.indexOf(root.effectiveLightScheme))
+
+                    onActivated: (index) => {
+                        settings.colorSchemeLight = control.lightThemeNames[index]
+                        settings.colorScheme = control.lightThemeNames[index]
+                    }
+                }
+            }
+
+            SettingRow {
+                text: settings.themeMode === 0 ? qsTr("Dark Theme") : qsTr("Theme")
+                visible: settings.themeMode !== 1
+
+                FishUI.ComboBox {
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 200
+                    model: control.darkThemeLabels
+                    currentIndex: Math.max(0, control.darkThemeNames.indexOf(root.effectiveDarkScheme))
+
+                    onActivated: (index) => {
+                        settings.colorSchemeDark = control.darkThemeNames[index]
+                        settings.colorScheme = control.darkThemeNames[index]
+                    }
                 }
             }
 
@@ -203,9 +236,9 @@ FishUI.Window {
             }
 
             SettingRow {
-                text: qsTr("Font Size")ma
+                text: qsTr("Font Size")
 
-                FishUI.Slider {
+                Slider {
                     id: fontSizeSlider
                     anchors.verticalCenter: parent.verticalCenter
                     width: 160
@@ -226,7 +259,7 @@ FishUI.Window {
                 text: qsTr("Blinking Cursor")
                 last: true
 
-                FishUI.Switch {
+                Switch {
                     anchors.verticalCenter: parent.verticalCenter
                     checked: settings.blinkingCursor
                     onToggled: settings.blinkingCursor = checked
@@ -238,7 +271,7 @@ FishUI.Window {
             SettingRow {
                 text: qsTr("Opacity")
 
-                FishUI.Slider {
+                Slider {
                     id: transparencySlider
                     anchors.verticalCenter: parent.verticalCenter
                     width: 160
@@ -259,7 +292,7 @@ FishUI.Window {
                 text: qsTr("Window Blur")
                 last: true
 
-                FishUI.Switch {
+                Switch {
                     anchors.verticalCenter: parent.verticalCenter
                     checked: settings.blur
                     onToggled: settings.blur = checked
@@ -300,7 +333,7 @@ FishUI.Window {
             SettingRow {
                 text: qsTr("Flash on Bell")
 
-                FishUI.Switch {
+                Switch {
                     anchors.verticalCenter: parent.verticalCenter
                     checked: settings.visualBell
                     onToggled: settings.visualBell = checked
@@ -311,7 +344,7 @@ FishUI.Window {
                 text: qsTr("Warn Before Pasting Multiple Lines")
                 last: true
 
-                FishUI.Switch {
+                Switch {
                     anchors.verticalCenter: parent.verticalCenter
                     checked: settings.confirmMultilinePaste
                     onToggled: settings.confirmMultilinePaste = checked

@@ -30,10 +30,11 @@ FishUI.Window {
     height: settings.height
     title: currentItem ? currentItem.title : ""
 
-    blurEnabled: settings.blur
+    property bool blurEnabled: settings.blur
     background.color: terminalBackground
-    background.opacity: settings.opacity
-    headerDarkMode: chromeDark
+    background.opacity: settings.blur ? settings.opacity : 1.0
+    background.border.color: root.chromeDark ? Qt.rgba(1, 1, 1, 0.08) : Qt.rgba(0, 0, 0, 0.10)
+    property bool headerDarkMode: chromeDark
     header.height: 44
     windowButtonsAlignment: Qt.AlignVCenter
     windowButtonsTopMargin: 0
@@ -54,20 +55,45 @@ FishUI.Window {
         _zoomIndicator.show()
     }
 
-    // Settings saved before themes existed hold an empty name.
-    readonly property string colorScheme: settings.colorScheme !== "" ? settings.colorScheme : "TokyoNight"
+    function isThemeLight(name) {
+        return ["TokyoNight-Day", "One-Light", "Catppuccin-Latte", "Gruvbox-Light", "SolarizedLight"].indexOf(name) !== -1
+    }
+
+    // Determine if we should render light mode:
+    // 0 = Follow System (matches !FishUI.Theme.darkMode)
+    // 1 = Light
+    // 2 = Dark
+    readonly property bool isLightMode: {
+        if (settings.themeMode === 1) return true
+        if (settings.themeMode === 2) return false
+        return !FishUI.Theme.darkMode
+    }
+
+    readonly property string effectiveLightScheme: {
+        if (settings.colorSchemeLight !== "") return settings.colorSchemeLight
+        if (isThemeLight(settings.colorScheme)) return settings.colorScheme
+        return "TokyoNight-Day"
+    }
+
+    readonly property string effectiveDarkScheme: {
+        if (settings.colorSchemeDark !== "") return settings.colorSchemeDark
+        if (!isThemeLight(settings.colorScheme) && settings.colorScheme !== "") return settings.colorScheme
+        return "TokyoNight"
+    }
+
+    readonly property string colorScheme: isLightMode ? effectiveLightScheme : effectiveDarkScheme
     readonly property var colorSchemeInfo: currentTerminal ? currentTerminal.colorSchemeInfo(colorScheme) : ({})
 
     // The scheme's own background, so cells in the default colour and the
     // window around the text are one surface.
     readonly property color terminalBackground: colorSchemeInfo.background
                                                 ? colorSchemeInfo.background
-                                                : "#1A1B26"
+                                                : (chromeDark ? "#1A1B26" : "#E1E2E7")
 
     // The title bar is painted with the terminal, so its text and buttons follow
     // the scheme rather than the system theme.
     readonly property color chromeForeground: colorSchemeInfo.foreground ? colorSchemeInfo.foreground
-                                                                         : FishUI.Theme.textColor
+                                                                         : (chromeDark ? "#C0CAF5" : "#3760BF")
     readonly property bool chromeDark: 0.2126 * terminalBackground.r + 0.7152 * terminalBackground.g
                                        + 0.0722 * terminalBackground.b < 0.5
 
@@ -219,7 +245,9 @@ FishUI.Window {
             anchors.rightMargin: 8
             anchors.verticalCenter: parent.verticalCenter
             size: 28
-            source: "qrc:/FishUI/images/" + (root.chromeDark ? "dark" : "light") + "/add.svg"
+            source: "qrc:/fishui/kit/images/" + (root.chromeDark ? "dark/" : "light/") + "add.svg"
+            hoveredColor: root.chromeDark ? Qt.rgba(1, 1, 1, 0.12) : Qt.rgba(0, 0, 0, 0.08)
+            pressedColor: root.chromeDark ? Qt.rgba(1, 1, 1, 0.20) : Qt.rgba(0, 0, 0, 0.15)
             onClicked: root.openNewTab()
         }
     }
@@ -236,9 +264,9 @@ FishUI.Window {
         width: _zoomLabel.implicitWidth + FishUI.Units.largeSpacing * 2
         height: 36
         radius: height / 2
-        color: FishUI.Theme.secondBackgroundColor
+        color: root.chromeDark ? Qt.rgba(0.18, 0.18, 0.22, 0.90) : Qt.rgba(1, 1, 1, 0.92)
         border.width: 1
-        border.color: Qt.rgba(FishUI.Theme.textColor.r, FishUI.Theme.textColor.g, FishUI.Theme.textColor.b, 0.1)
+        border.color: root.chromeDark ? Qt.rgba(1, 1, 1, 0.12) : Qt.rgba(0, 0, 0, 0.10)
         opacity: 0
         visible: opacity > 0
 
@@ -254,6 +282,7 @@ FishUI.Window {
             text: qsTr("%1 pt").arg(root.fontPointSize)
             font.pixelSize: 13
             font.weight: Font.Medium
+            color: root.chromeForeground
         }
 
         Timer {

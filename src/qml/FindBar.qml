@@ -19,17 +19,17 @@ Rectangle {
     property color accentColor: "#7AA2F7"
     property bool darkMode: true
 
-    readonly property color tint: darkMode ? "#FFFFFF" : "#323238"
+    readonly property color tint: darkMode ? "#FFFFFF" : "#1A1A1A"
 
     signal closed()
 
     width: 320
     height: 40
     radius: FishUI.Theme.bigRadius
-    color: Qt.tint(backgroundColor, Qt.rgba(textColor.r, textColor.g, textColor.b, darkMode ? 0.1 : 0.06))
-    border.width: 0.5
+    color: Qt.tint(backgroundColor, Qt.rgba(textColor.r, textColor.g, textColor.b, darkMode ? 0.10 : 0.06))
+    border.width: 1
     border.pixelAligned: false
-    border.color: Qt.rgba(textColor.r, textColor.g, textColor.b, 0.12)
+    border.color: Qt.rgba(textColor.r, textColor.g, textColor.b, darkMode ? 0.12 : 0.18)
     visible: false
 
     function open(text) {
@@ -102,9 +102,7 @@ Rectangle {
 
         FishUI.RoundImageButton {
             size: 28
-            iconName: "chevron-up"
-            iconSize: 16
-            iconColor: control.textColor
+            source: "image://icontheme/go-up"
             hoveredColor: Qt.rgba(control.tint.r, control.tint.g, control.tint.b, control.darkMode ? 0.12 : 0.11)
             pressedColor: Qt.rgba(control.tint.r, control.tint.g, control.tint.b, control.darkMode ? 0.06 : 0.21)
             onClicked: control.search(false, true)
@@ -112,9 +110,7 @@ Rectangle {
 
         FishUI.RoundImageButton {
             size: 28
-            iconName: "chevron-down"
-            iconSize: 16
-            iconColor: control.textColor
+            source: "image://icontheme/go-down"
             hoveredColor: Qt.rgba(control.tint.r, control.tint.g, control.tint.b, control.darkMode ? 0.12 : 0.11)
             pressedColor: Qt.rgba(control.tint.r, control.tint.g, control.tint.b, control.darkMode ? 0.06 : 0.21)
             onClicked: control.search(true, true)
