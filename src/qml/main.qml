@@ -340,10 +340,14 @@ FishUI.Window {
         }
     }
 
+    property Component _terminalComponent: null
+
     function openTab(path, command) {
-        const component = Qt.createComponent("Terminal.qml");
-        if (component.status === Component.Ready) {
-            const object = _tabView.addTab(component, { path: path, command: command || [] })
+        if (!_terminalComponent)
+            _terminalComponent = Qt.createComponent("Terminal.qml")
+
+        if (_terminalComponent.status === Component.Ready) {
+            const object = _tabView.addTab(_terminalComponent, { path: path, command: command || [] })
             // Looked up when the shell exits: closing other tabs shifts the index.
             object.terminalClosed.connect(() => closeTab(indexOfTab(object)))
         }

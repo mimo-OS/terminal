@@ -25,7 +25,7 @@
 
 // Qt
 #include <QAction>
-#include <QApplication>
+#include <QGuiApplication>
 #include <QtAlgorithms>
 #include <QClipboard>
 #include <QString>
@@ -460,7 +460,13 @@ void UrlFilter::HotSpot::activate(const QString& actionName)
 
     if ( actionName == QLatin1String("copy-action") )
     {
-        QApplication::clipboard()->setText(url);
+        QClipboard *cb = QGuiApplication::clipboard();
+        if (cb) {
+            cb->setText(url, QClipboard::Clipboard);
+            if (cb->supportsSelection()) {
+                cb->setText(url, QClipboard::Selection);
+            }
+        }
         return;
     }
 

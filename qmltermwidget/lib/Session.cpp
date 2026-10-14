@@ -29,7 +29,6 @@
 #include <cstdlib>
 
 // Qt
-#include <QApplication>
 #include <QDir>
 #include <QFileInfo>
 #include <QFile>

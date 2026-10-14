@@ -44,9 +44,9 @@ add_subdirectory(qmltermwidget)
 add_executable(${PROJECT_NAME} ${SRCS} ${RESOURCES})
 target_link_libraries(${PROJECT_NAME}
         Qt6::Core
+        Qt6::Gui
         Qt6::Qml
         Qt6::Quick
-        Qt6::Widgets
         Qt6::DBus
         Cutefish::Applications
 )

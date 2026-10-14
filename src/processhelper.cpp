@@ -21,7 +21,7 @@
 #include "applicationlauncher.h"
 #include <QDesktopServices>
 #include <QDBusInterface>
-#include <QApplication>
+#include <QCoreApplication>
 #include <QUrl>
 #include <QDir>
 #include <QFileInfo>
@@ -72,7 +72,7 @@ bool ProcessHelper::openFileManager(const QString &url)
 
     iface.asyncCall(QStringLiteral("ShowFolders"),
                     QStringList() << QUrl::fromLocalFile(url).toString(),
-                    QString::number(QApplication::applicationPid()));
+                    QString::number(QCoreApplication::applicationPid()));
 
     return true;
 }
@@ -88,7 +88,7 @@ bool ProcessHelper::showInFileManager(const QString &path)
 
     iface.asyncCall(QStringLiteral("ShowItems"),
                     QStringList() << QUrl::fromLocalFile(path).toString(),
-                    QString::number(QApplication::applicationPid()));
+                    QString::number(QCoreApplication::applicationPid()));
 
     return true;
 }

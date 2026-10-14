@@ -18,7 +18,7 @@
  */
 
 #include "utils.h"
-#include <QApplication>
+#include <QGuiApplication>
 #include <QClipboard>
 
 static Utils *SELF = nullptr;
@@ -39,10 +39,25 @@ Utils::Utils(QObject *parent)
 
 QString Utils::text() const
 {
-    return qApp->clipboard()->text();
+    QClipboard *cb = QGuiApplication::clipboard();
+    if (!cb)
+        return QString();
+
+    QString str = cb->text(QClipboard::Clipboard);
+    if (str.isEmpty() && cb->supportsSelection()) {
+        str = cb->text(QClipboard::Selection);
+    }
+    return str;
 }
 
 void Utils::setText(const QString &text)
 {
-    qApp->clipboard()->setText(text);
+    QClipboard *cb = QGuiApplication::clipboard();
+    if (!cb)
+        return;
+
+    cb->setText(text, QClipboard::Clipboard);
+    if (cb->supportsSelection()) {
+        cb->setText(text, QClipboard::Selection);
+    }
 }

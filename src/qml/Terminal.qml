@@ -83,6 +83,16 @@ Item {
             event.accepted = true
         }
 
+        if (event.key === Qt.Key_Insert) {
+            if (event.modifiers & Qt.ShiftModifier) {
+                _pasteAction.trigger()
+                event.accepted = true
+            } else if (event.modifiers & Qt.ControlModifier) {
+                _copyAction.trigger()
+                event.accepted = true
+            }
+        }
+
         if ((event.key === Qt.Key_Q)
                 && (event.modifiers & Qt.ControlModifier)
                 && (event.modifiers & Qt.ShiftModifier)) {
@@ -258,7 +268,7 @@ Item {
             hoverEnabled: true
             cursorShape: _linkHover.segments.length && _linkHover.ctrlHeld ? Qt.PointingHandCursor
                          : _terminal.terminalUsesMouse ? Qt.ArrowCursor : Qt.IBeamCursor
-            acceptedButtons:  Qt.RightButton | Qt.LeftButton
+            acceptedButtons: Qt.RightButton | Qt.LeftButton | Qt.MiddleButton
 
             // The menu opens on release: shown while the button is still down, it
             // takes the release, leaving this area pressed and its cursor stale.
@@ -271,6 +281,15 @@ Item {
             }
 
             onPressed: (mouse) => {
+                if (mouse.button === Qt.MiddleButton) {
+                    if (_terminal.terminalUsesMouse && !(mouse.modifiers & Qt.ShiftModifier)) {
+                        _terminal.simulateMousePress(mouse.x, mouse.y, mouse.button, mouse.buttons, mouse.modifiers)
+                    } else {
+                        _terminal.pasteSelection()
+                    }
+                    return
+                }
+
                 menuPress = mouse.button === Qt.RightButton
                         && (!_terminal.terminalUsesMouse || mouse.modifiers & Qt.ShiftModifier)
 
@@ -291,6 +310,13 @@ Item {
             onReleased: (mouse) => {
                 if (linkPress)
                     return
+
+                if (mouse.button === Qt.MiddleButton) {
+                    if (_terminal.terminalUsesMouse && !(mouse.modifiers & Qt.ShiftModifier)) {
+                        _terminal.simulateMouseRelease(mouse.x, mouse.y, mouse.button, mouse.buttons, mouse.modifiers)
+                    }
+                    return
+                }
 
                 if (menuPress) {
                     menuPress = false
@@ -558,16 +584,25 @@ Item {
     }
 
     function openMenu(x, y) {
-        // A right click on a word outside the selection selects that word first,
-        // so Copy and the file and link items act on what was clicked.
-        if (!_terminal.isSelectedAt(x, y))
-            _terminal.selectWordAt(x, y)
-
+        const linkUnderCursor = _terminal.linkAt(x, y)
+        const wordUnderCursor = (!_terminal.hasSelection || !_terminal.isSelectedAt(x, y)) ? _terminal.wordAt(x, y) : ""
         const selection = _terminal.hasSelection ? _terminal.selectedText().trim() : ""
-        const selectionIsLink = /^[a-z][a-z0-9+.-]*:\/\/\S+$/i.test(selection)
 
-        _menuContext.link = _terminal.linkAt(x, y) || (selectionIsLink ? selection : "")
-        _menuContext.path = _menuContext.link === "" ? Process.existingPath(selection, _session.currentDir) : ""
+        if (linkUnderCursor !== "") {
+            _menuContext.link = linkUnderCursor
+            _menuContext.path = ""
+        } else if (_terminal.isSelectedAt(x, y) && /^[a-z][a-z0-9+.-]*:\/\/\S+$/i.test(selection)) {
+            _menuContext.link = selection
+            _menuContext.path = ""
+        } else if (wordUnderCursor !== "" && /^[a-z][a-z0-9+.-]*:\/\/\S+$/i.test(wordUnderCursor)) {
+            _menuContext.link = wordUnderCursor
+            _menuContext.path = ""
+        } else {
+            _menuContext.link = ""
+            const pathCandidate = (_terminal.isSelectedAt(x, y) && selection !== "") ? selection : wordUnderCursor
+            _menuContext.path = pathCandidate !== "" ? Process.existingPath(pathCandidate, _session.currentDir) : ""
+        }
+
         _menuContext.canPaste = Utils.text() !== ""
 
         if (!_terminalMenu)

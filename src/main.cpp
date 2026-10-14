@@ -17,7 +17,11 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <QApplication>
+#include <features.h>
+#ifdef __GLIBC__
+#include <malloc.h>
+#endif
+#include <QGuiApplication>
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QLocale>
@@ -26,6 +30,7 @@
 #include <QIcon>
 #include <QCommandLineParser>
 #include <QDir>
+#include <QPixmapCache>
 
 #include "processhelper.h"
 #include "utils.h"
@@ -33,7 +38,15 @@
 
 int main(int argc, char *argv[])
 {
-    QApplication app(argc, argv);
+#ifdef __GLIBC__
+    // Optimize memory: prevent allocating dozens of 64MB thread arenas and trim freed pages
+    mallopt(M_ARENA_MAX, 2);
+    mallopt(M_TRIM_THRESHOLD, 128 * 1024);
+    mallopt(M_MMAP_THRESHOLD, 64 * 1024);
+#endif
+
+    QGuiApplication app(argc, argv);
+    QPixmapCache::setCacheLimit(2048);
     app.setOrganizationName(QStringLiteral("cutefishos"));
     app.setWindowIcon(QIcon::fromTheme("terminal"));
 
@@ -87,6 +100,10 @@ int main(int argc, char *argv[])
     engine.rootContext()->setContextProperty("StartupDirectory", workdir);
     engine.rootContext()->setContextProperty("StartupCommand", command);
 
+    const QString localQml = QDir::homePath() + QStringLiteral("/.local/lib/qt6/qml");
+    if (QDir(localQml).exists()) {
+        engine.addImportPath(localQml);
+    }
     engine.addImportPath(QStringLiteral("qrc:/"));
     engine.load(QUrl(QStringLiteral("qrc:/qml/main.qml")));
 

@@ -27,24 +27,19 @@
 #include <cmath>
 
 // Qt
-#include <QAbstractButton>
-#include <QApplication>
+#include <QStyleHints>
 #include <QGuiApplication>
 #include <QQuickWindow>
-#include <QBoxLayout>
 #include <QClipboard>
 #include <QKeyEvent>
 #include <QEvent>
 #include <QTime>
 #include <QFile>
-#include <QGridLayout>
-#include <QLabel>
-#include <QLayout>
 #include <QMimeData>
 #include <QPainter>
 #include <QPixmap>
 #include <QRegularExpression>
-#include <QStyle>
+#include <cstdio>
 #include <QTimer>
 #include <QtDebug>
 #include <QGuiApplication>
@@ -177,7 +172,7 @@ void TerminalDisplay::setBackgroundColor(const QColor& color)
       setPalette( p );
 
       // Avoid propagating the palette change to the scroll bar
-      _scrollBar->setPalette( QApplication::palette() );
+      _scrollBar->setPalette( QGuiApplication::palette() );
 
     update();
 }
@@ -370,7 +365,6 @@ TerminalDisplay::TerminalDisplay(QQuickItem *parent)
 :QQuickPaintedItem(parent)
 ,_screenWindow(nullptr)
 ,_allowBell(true)
-,_gridLayout(nullptr)
 ,_fontHeight(1)
 ,_fontWidth(1)
 ,_fontAscent(1)
@@ -407,10 +401,8 @@ TerminalDisplay::TerminalDisplay(QQuickItem *parent)
 ,_tripleClickMode(SelectWholeLine)
 ,_isFixedSize(false)
 ,_possibleTripleClick(false)
-,_resizeWidget(nullptr)
 ,_resizeTimer(nullptr)
 ,_flowControlWarningEnabled(false)
-,_outputSuspendedLabel(nullptr)
 ,_lineSpacing(0)
 ,_colorsInverted(false)
 ,_opacity(static_cast<qreal>(1))
@@ -437,6 +429,8 @@ TerminalDisplay::TerminalDisplay(QQuickItem *parent)
   // konsole in opaque mode.
   _topMargin = _topBaseMargin;
   _leftMargin = _leftBaseMargin;
+
+  setUseFBORendering(true);
 
   m_palette = qApp->palette();
 
@@ -503,8 +497,6 @@ TerminalDisplay::~TerminalDisplay()
 
   delete[] _image;
 
-  delete _gridLayout;
-  delete _outputSuspendedLabel;
   delete _filterChain;
 }
 
@@ -1039,12 +1031,6 @@ void TerminalDisplay::setCursorPos(const int curx, const int cury)
 // Instead only new lines have to be drawn
 void TerminalDisplay::scrollImage(int lines , const QRect& screenWindowRegion)
 {
-    // if the flow control warning is enabled this will interfere with the
-    // scrolling optimizations and cause artifacts.  the simple solution here
-    // is to just disable the optimization whilst it is visible
-    if ( _outputSuspendedLabel && _outputSuspendedLabel->isVisible() )
-        return;
-
     // constrain the region to the display
     // the bottom of the region is capped to the number of lines in the display's
     // internal image - 2, so that the height of 'region' is strictly less
@@ -1058,10 +1044,6 @@ void TerminalDisplay::scrollImage(int lines , const QRect& screenWindowRegion)
          || !region.isValid()
          || (region.top() + abs(lines)) >= region.bottom()
          || this->_lines <= region.height() ) return;
-
-    // hide terminal size label to prevent it being scrolled
-    if (_resizeWidget && _resizeWidget->isVisible())
-        _resizeWidget->hide();
 
     // Note:  With Qt 4.4 the left edge of the scrolled area must be at 0
     // to get the correct (newly exposed) part of the widget repainted.
@@ -1408,9 +1390,8 @@ void TerminalDisplay::setBlinkingCursor(bool blink)
 
   if (blink && !_blinkCursorTimer->isActive() && hasFocus())
   {
-      // QApplication::cursorFlashTime() may be negative, and a too fast
-      // blinking is not good. Also, see TerminalDisplay::keyPressEvent.
-      _blinkCursorTimer->start(std::max(QApplication::cursorFlashTime(), 1000) / 2);
+      int flashTime = QGuiApplication::styleHints() ? QGuiApplication::styleHints()->cursorFlashTime() : 1000;
+      _blinkCursorTimer->start(std::max(flashTime, 1000) / 2);
   }
 
   if (!blink && _blinkCursorTimer->isActive())
@@ -1459,8 +1440,8 @@ void TerminalDisplay::focusInEvent(QFocusEvent*)
 {
     if (_hasBlinkingCursor)
     {
-        // see TerminalDisplay::setBlinkingCursor
-        _blinkCursorTimer->start(std::max(QApplication::cursorFlashTime(), 1000) / 2);
+        int flashTime = QGuiApplication::styleHints() ? QGuiApplication::styleHints()->cursorFlashTime() : 1000;
+        _blinkCursorTimer->start(std::max(flashTime, 1000) / 2);
     }
     updateCursor();
 
@@ -2367,7 +2348,7 @@ void TerminalDisplay::hideStaleMouse() const
     if (_scrollBar->underMouse()) // the mouse is over the scrollbar
         return;
     gs_deadSpot = gs_futureDeadSpot;
-    QApplication::setOverrideCursor(Qt::BlankCursor);
+    QGuiApplication::setOverrideCursor(Qt::BlankCursor);
 }
 
 void TerminalDisplay::autoHideMouseAfter(int delay)
@@ -2396,7 +2377,7 @@ void TerminalDisplay::mouseMoveEvent(QMouseEvent* ev)
       if (gs_deadSpot.x() > -1 && (ev->pos() - gs_deadSpot).manhattanLength() > 8)
       {
         gs_deadSpot = QPoint(-1,-1);
-        QApplication::restoreOverrideCursor();
+        QGuiApplication::restoreOverrideCursor();
       }
       gs_futureDeadSpot = ev->position().toPoint();
       Q_ASSERT(_hideMouseTimer);
@@ -2485,7 +2466,7 @@ void TerminalDisplay::mouseMoveEvent(QMouseEvent* ev)
     // if the mouse has moved sufficiently, we will confirm
 
 //   int distance = KGlobalSettings::dndEventDelay();
-   int distance = QApplication::startDragDistance();
+   int distance = QGuiApplication::styleHints() ? QGuiApplication::styleHints()->startDragDistance() : 10;
    if ( ev->position().x() > dragInfo.start.x() + distance || ev->position().x() < dragInfo.start.x() - distance ||
         ev->position().y() > dragInfo.start.y() + distance || ev->position().y() < dragInfo.start.y() - distance)
    {
@@ -2860,7 +2841,8 @@ void TerminalDisplay::mouseDoubleClickEvent(QMouseEvent* ev)
 
   _possibleTripleClick=true;
 
-  QTimer::singleShot(QApplication::doubleClickInterval(),this,
+  int interval = QGuiApplication::styleHints() ? QGuiApplication::styleHints()->mouseDoubleClickInterval() : 400;
+  QTimer::singleShot(interval, this,
                      SLOT(tripleClickTimeout()));
 }
 
@@ -2956,6 +2938,33 @@ bool TerminalDisplay::selectWordAt(qreal x, qreal y)
     return true;
 }
 
+QString TerminalDisplay::wordAt(qreal x, qreal y)
+{
+    if (!_screenWindow || !_image)
+        return QString();
+
+    int charLine = 0;
+    int charColumn = 0;
+    getCharacterCellAt(QPointF(x, y), charLine, charColumn);
+
+    int index = loc(charColumn, charLine);
+    if (index < 0 || index > _imageSize || QChar(_image[index].character).isSpace())
+        return QString();
+
+    QPoint bgnSel;
+    QPoint endSel;
+    findWordBounds(QPoint(charColumn, charLine), bgnSel, endSel);
+
+    QString result;
+    for (int col = bgnSel.x(); col <= endSel.x(); ++col) {
+        int i = loc(col, bgnSel.y());
+        if (i >= 0 && i <= _imageSize) {
+            result.append(QChar(_image[i].character));
+        }
+    }
+    return result.trimmed();
+}
+
 int TerminalDisplay::wheelLines(QWheelEvent *ev)
 {
     // Touchpads report pixels: one line per line of text scrolled.
@@ -2967,7 +2976,8 @@ int TerminalDisplay::wheelLines(QWheelEvent *ev)
     }
 
     // A wheel notch is 120; high-resolution wheels send fractions of one.
-    _wheelAngleRemainder += ev->angleDelta().y() * QApplication::wheelScrollLines();
+    int scrollLines = QGuiApplication::styleHints() ? QGuiApplication::styleHints()->wheelScrollLines() : 3;
+    _wheelAngleRemainder += ev->angleDelta().y() * scrollLines;
     const int lines = _wheelAngleRemainder / 120;
     _wheelAngleRemainder -= lines * 120;
     return lines;
@@ -3167,15 +3177,29 @@ void TerminalDisplay::emitSelection(bool useXselection,bool appendReturn)
   if ( !_screenWindow )
       return;
 
-  // Paste Clipboard by simulating keypress events
-  QString text = QApplication::clipboard()->text(useXselection ? QClipboard::Selection :
-                                                                 QClipboard::Clipboard);
+  QClipboard *cb = QGuiApplication::clipboard();
+  if (!cb)
+      return;
+
+  // Paste Clipboard by simulating keypress events with fallback
+  QString text;
+  if (useXselection) {
+      text = cb->text(QClipboard::Selection);
+      if (text.isEmpty())
+          text = cb->text(QClipboard::Clipboard);
+  } else {
+      text = cb->text(QClipboard::Clipboard);
+      if (text.isEmpty() && cb->supportsSelection())
+          text = cb->text(QClipboard::Selection);
+  }
+
   if ( ! text.isEmpty() )
   {
     text.replace(QLatin1String("\r\n"), QLatin1String("\n"));
     text.replace(QLatin1Char('\n'), QLatin1Char('\r'));
 
-    if (_trimPastedTrailingNewlines) {
+    // Trim trailing \r on single-line text to prevent nuisance multiline dialog
+    if (_trimPastedTrailingNewlines || (text.endsWith(QLatin1Char('\r')) && text.count(QLatin1Char('\r')) == 1)) {
         static const QRegularExpression regexp{u"\\r+$"_s};
         text.replace(regexp, QString());
     }
@@ -3255,9 +3279,17 @@ void TerminalDisplay::confirmPaste()
 
 void TerminalDisplay::setSelection(const QString& t)
 {
-    if (QApplication::clipboard()->supportsSelection())
+    if (t.isEmpty())
+        return;
+
+    QClipboard *cb = QGuiApplication::clipboard();
+    if (cb)
     {
-        QApplication::clipboard()->setText(t, QClipboard::Selection);
+        if (cb->supportsSelection()) {
+            cb->setText(t, QClipboard::Selection);
+        } else {
+            cb->setText(t, QClipboard::Clipboard);
+        }
     }
 }
 
@@ -3343,8 +3375,15 @@ void TerminalDisplay::copyClipboard()
       return;
 
   QString text = _screenWindow->selectedText(_preserveLineBreaks);
-  if (!text.isEmpty())
-    QApplication::clipboard()->setText(text);
+  if (!text.isEmpty()) {
+      QClipboard *cb = QGuiApplication::clipboard();
+      if (cb) {
+          cb->setText(text, QClipboard::Clipboard);
+          if (cb->supportsSelection()) {
+              cb->setText(text, QClipboard::Selection);
+          }
+      }
+  }
 }
 
 void TerminalDisplay::pasteClipboard()
@@ -3394,13 +3433,40 @@ int TerminalDisplay::motionAfterPasting()
 
 void TerminalDisplay::keyPressEvent( QKeyEvent* event )
 {
+    // Fast-path standard terminal shortcuts so they never leak to pty or break selection prematurely
+    if ((event->modifiers() & Qt::ControlModifier) && (event->modifiers() & Qt::ShiftModifier)) {
+        if (event->key() == Qt::Key_C) {
+            copyClipboard();
+            event->accept();
+            return;
+        }
+        if (event->key() == Qt::Key_V) {
+            pasteClipboard();
+            event->accept();
+            return;
+        }
+    }
+    if (event->key() == Qt::Key_Insert) {
+        if (event->modifiers() & Qt::ShiftModifier) {
+            pasteClipboard();
+            event->accept();
+            return;
+        }
+        if (event->modifiers() & Qt::ControlModifier) {
+            copyClipboard();
+            event->accept();
+            return;
+        }
+    }
+
     _actSel=0; // Key stroke implies a screen update, so TerminalDisplay won't
               // know where the current selection is.
 
     if (_hasBlinkingCursor)
     {
       // see TerminalDisplay::setBlinkingCursor
-      _blinkCursorTimer->start(std::max(QApplication::cursorFlashTime(), 1000) / 2);
+      int flashTime = QGuiApplication::styleHints() ? QGuiApplication::styleHints()->cursorFlashTime() : 1000;
+      _blinkCursorTimer->start(std::max(flashTime, 1000) / 2);
       if (_cursorBlinking)
         blinkCursorEvent();
       else
@@ -3535,7 +3601,7 @@ bool TerminalDisplay::event(QEvent* event)
         break;
     case QEvent::PaletteChange:
     case QEvent::ApplicationPaletteChange:
-        _scrollBar->setPalette( QApplication::palette() );
+        _scrollBar->setPalette( QGuiApplication::palette() );
         break;
     case QEvent::InputMethodQuery:
         inputMethodQuery(static_cast<QInputMethodQueryEvent *>(event));
@@ -3571,7 +3637,7 @@ void TerminalDisplay::bell(const QString& message)
 
     if (_bellMode==SystemBeepBell)
     {
-        QApplication::beep();
+        std::fputs("\a", stderr);
     }
     else if (_bellMode==NotifyBell)
     {
@@ -3788,7 +3854,9 @@ void TerminalDisplay::doDrag()
   dragInfo.state = diDragging;
   dragInfo.dragObject = new QDrag(this);
   QMimeData *mimeData = new QMimeData;
-  mimeData->setText(QApplication::clipboard()->text(QClipboard::Selection));
+  QClipboard *cb = QGuiApplication::clipboard();
+  if (cb)
+      mimeData->setText(cb->text(QClipboard::Selection));
   dragInfo.dragObject->setMimeData(mimeData);
   dragInfo.dragObject->exec(Qt::CopyAction);
   // Don't delete the QTextDrag object.  Qt will delete it when it's done with it.
@@ -3796,43 +3864,7 @@ void TerminalDisplay::doDrag()
 
 void TerminalDisplay::outputSuspended(bool suspended)
 {
-    //create the label when this function is first called
-
-//    if (!_outputSuspendedLabel)
-//    {
-//            //This label includes a link to an English language website
-//            //describing the 'flow control' (Xon/Xoff) feature found in almost
-//            //all terminal emulators.
-//            //If there isn't a suitable article available in the target language the link
-//            //can simply be removed.
-//            _outputSuspendedLabel = new QLabel( tr("<qt>Output has been "
-//                                                "<a href=\"http://en.wikipedia.org/wiki/Flow_control\">suspended</a>"
-//                                                " by pressing Ctrl+S."
-//                                               "  Press <b>Ctrl+Q</b> to resume.</qt>"),
-//                                               this );
-
-//            QPalette palette(_outputSuspendedLabel->palette());
-//            //KColorScheme::adjustBackground(palette,KColorScheme::NeutralBackground);
-//            _outputSuspendedLabel->setPalette(palette);
-//            _outputSuspendedLabel->setAutoFillBackground(true);
-//            _outputSuspendedLabel->setBackgroundRole(QPalette::Base);
-//            _outputSuspendedLabel->setFont(QApplication::font());
-//            _outputSuspendedLabel->setContentsMargins(5, 5, 5, 5);
-
-//            //enable activation of "Xon/Xoff" link in label
-//            _outputSuspendedLabel->setTextInteractionFlags(Qt::LinksAccessibleByMouse |
-//                                                          Qt::LinksAccessibleByKeyboard);
-//            _outputSuspendedLabel->setOpenExternalLinks(true);
-//            _outputSuspendedLabel->setVisible(false);
-
-//            _gridLayout->addWidget(_outputSuspendedLabel);
-//            _gridLayout->addItem( new QSpacerItem(0,0,QSizePolicy::Expanding,
-//                                                      QSizePolicy::Expanding),
-//                                 1,0);
-
-//    }
-
-    _outputSuspendedLabel->setVisible(suspended);
+    Q_UNUSED(suspended);
 }
 
 uint TerminalDisplay::lineSpacing() const
@@ -3860,11 +3892,12 @@ void TerminalDisplay::setMargin(int i)
     _leftBaseMargin = i;
 }
 
-AutoScrollHandler::AutoScrollHandler(QWidget* parent)
+AutoScrollHandler::AutoScrollHandler(QObject* parent)
 : QObject(parent)
 , _timerId(0)
 {
-    parent->installEventFilter(this);
+    if (parent)
+        parent->installEventFilter(this);
 }
 void AutoScrollHandler::timerEvent(QTimerEvent* event)
 {
@@ -3872,50 +3905,19 @@ void AutoScrollHandler::timerEvent(QTimerEvent* event)
         return;
 
     QMouseEvent mouseEvent(QEvent::MouseMove,
-                           widget()->mapFromGlobal(QCursor::pos()),
+                           QPointF(0, 0),
                            QCursor::pos(),
                            Qt::NoButton,
                            Qt::LeftButton,
                            Qt::NoModifier);
 
-    QApplication::sendEvent(widget(),&mouseEvent);
+    QCoreApplication::sendEvent(parent(),&mouseEvent);
 }
 bool AutoScrollHandler::eventFilter(QObject* watched,QEvent* event)
 {
     Q_ASSERT( watched == parent() );
     Q_UNUSED( watched )
-
-    QMouseEvent* mouseEvent = (QMouseEvent*)event;
-    switch (event->type())
-    {
-        case QEvent::MouseMove:
-        {
-            bool mouseInWidget = widget()->rect().contains(mouseEvent->pos());
-
-            if (mouseInWidget)
-            {
-                if (_timerId)
-                    killTimer(_timerId);
-                _timerId = 0;
-            }
-            else
-            {
-                if (!_timerId && (mouseEvent->buttons() & Qt::LeftButton))
-                    _timerId = startTimer(100);
-            }
-                break;
-        }
-        case QEvent::MouseButtonRelease:
-            if (_timerId && (mouseEvent->buttons() & ~Qt::LeftButton))
-            {
-                killTimer(_timerId);
-                _timerId = 0;
-            }
-        break;
-        default:
-        break;
-    };
-
+    Q_UNUSED( event )
     return false;
 }
 

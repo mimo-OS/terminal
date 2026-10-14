@@ -22,9 +22,10 @@
 #define TERMINALDISPLAY_H
 
 // Qt
-#include <QColor>
+#include <QtGui/QColor>
+#include <QtGui/QPalette>
 #include <QPointer>
-#include <QQuickPaintedItem>
+#include <QtQuick/QQuickPaintedItem>
 #include <QString>
 #include <QObject>
 #include <QSize>
@@ -32,7 +33,15 @@
 // Konsole
 #include "Filter.h"
 #include "Character.h"
-#include "qtermwidget.h"
+#include "Emulation.h"
+namespace QTermWidget {
+    enum ScrollBarPosition {
+        NoScrollBar = 0,
+        ScrollBarLeft = 1,
+        ScrollBarRight = 2
+    };
+    using KeyboardCursorShape = Konsole::Emulation::KeyboardCursorShape;
+}
 //#include "konsole_export.h"
 #define KONSOLEPRIVATE_EXPORT
 
@@ -46,7 +55,6 @@ class QDropEvent;
 class QLabel;
 class QTimer;
 class QEvent;
-class QGridLayout;
 class QKeyEvent;
 class QShowEvent;
 class QHideEvent;
@@ -408,6 +416,8 @@ public:
     Q_INVOKABLE bool isSelectedAt(qreal x, qreal y);
     /** Selects the word under @p x, @p y as a double click would; false on blank space. */
     Q_INVOKABLE bool selectWordAt(qreal x, qreal y);
+    /** Returns the word under @p x, @p y without modifying selection or clipboard. */
+    Q_INVOKABLE QString wordAt(qreal x, qreal y);
     /** description, background, foreground and the 16 ANSI colours of a scheme. */
     Q_INVOKABLE QVariantMap colorSchemeInfo(const QString &name) const;
 
@@ -895,8 +905,6 @@ private:
 
     bool _allowBell;
 
-    QGridLayout* _gridLayout;
-
     bool _fixedFont; // has fixed pitch
     bool _fixedFont_original; // used only in textWidth()
     int  _fontHeight;     // height
@@ -906,7 +914,7 @@ private:
     bool _drawTextTestFlag;         // indicates when text drawing metrics are being tested
     bool _boldIntense;   // Whether intense colors should be rendered with bold font
     bool _italicEnabled; // Whether italic rendition is allowed
-    bool _useFBORendering; // Whether to use FramebufferObject (true) or Image (false)
+    bool _useFBORendering = true; // Whether to use FramebufferObject (true) or Image (false)
 
     int _leftMargin;    // offset
     int _topMargin;    // offset
@@ -976,14 +984,9 @@ private:
                                // after QApplication::doubleClickInterval() delay
 
 
-    QLabel* _resizeWidget;
     QTimer* _resizeTimer;
 
     bool _flowControlWarningEnabled;
-
-    //widgets related to the warning message that appears when the user presses Ctrl+S to suspend
-    //terminal output - informing them what has happened and how to resume output
-    QLabel* _outputSuspendedLabel;
 
     uint _lineSpacing;
     QString _colorScheme;
@@ -1090,12 +1093,12 @@ class AutoScrollHandler : public QObject
 Q_OBJECT
 
 public:
-    AutoScrollHandler(QWidget* parent);
+    AutoScrollHandler(QObject* parent);
 protected:
     void timerEvent(QTimerEvent* event) override;
     bool eventFilter(QObject* watched,QEvent* event) override;
 private:
-    QWidget* widget() const { return static_cast<QWidget*>(parent()); }
+    QObject* widget() const { return parent(); }
     int _timerId;
 };
 

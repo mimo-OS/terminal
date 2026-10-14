@@ -25,7 +25,6 @@
 #include "TerminalDisplay.h"
 
 // Qt
-#include <QApplication>
 #include <QDir>
 #include <QGuiApplication>
 #include <QPointer>

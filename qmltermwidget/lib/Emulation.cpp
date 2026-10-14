@@ -29,7 +29,6 @@
 #include <string>
 
 // Qt
-#include <QApplication>
 #include <QClipboard>
 #include <QHash>
 #include <QKeyEvent>
