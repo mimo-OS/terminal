@@ -2,6 +2,8 @@
 Version=1.0
 Name=Terminal
 Name[zh_CN]=终端
+GenericName=mimo OS Terminal
+Comment=mimo OS Terminal Emulator
 Exec=/usr/bin/cutefish-terminal
 Icon=utilities-terminal
 Terminal=false

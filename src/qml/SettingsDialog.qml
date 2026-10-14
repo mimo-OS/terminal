@@ -146,7 +146,7 @@ FishUI.Window {
                     const colors = control.schemeInfo.colors || []
                     const green = colors.length ? colors[2] : (root.chromeDark ? "#9ece6a" : "#587539")
                     const blue = colors.length ? colors[4] : (root.chromeDark ? "#7aa2f7" : "#2e7de9")
-                    return "<font color=\"" + green + "\">user@cutefish</font> "
+                    return "<font color=\"" + green + "\">user@mimo</font> "
                             + "<font color=\"" + blue + "\">~</font> $ ls<br>"
                             + "<font color=\"" + blue + "\">Documents&nbsp;&nbsp;Pictures</font>&nbsp;&nbsp;notes.txt"
                 }

@@ -87,7 +87,7 @@ int main(int argc, char *argv[])
     }
 
     QCommandLineParser parser;
-    parser.setApplicationDescription(QStringLiteral("Cutefish Terminal"));
+    parser.setApplicationDescription(QStringLiteral("mimo OS Terminal"));
     parser.addHelpOption();
     parser.addOption(QCommandLineOption({ QStringLiteral("w"), QStringLiteral("workdir") },
                                         QStringLiteral("Start in <directory>."), QStringLiteral("directory")));
