@@ -31,6 +31,7 @@
 #include <QCommandLineParser>
 #include <QDir>
 #include <QPixmapCache>
+#include <QTimer>
 
 #include "processhelper.h"
 #include "utils.h"
@@ -45,10 +46,34 @@ int main(int argc, char *argv[])
     mallopt(M_MMAP_THRESHOLD, 64 * 1024);
 #endif
 
+    // Dynamic EGL vendor selection to prevent NVIDIA driver bloat on Intel/AMD GPUs
+    if (!QFile::exists(QStringLiteral("/dev/nvidia0")) &&
+        QFile::exists(QStringLiteral("/usr/share/glvnd/egl_vendor.d/50_mesa.json"))) {
+        qputenv("__EGL_VENDOR_LIBRARY_FILENAMES", "/usr/share/glvnd/egl_vendor.d/50_mesa.json");
+    }
+
+    qputenv("QSG_RENDER_LOOP", "basic");
+
     QGuiApplication app(argc, argv);
     QPixmapCache::setCacheLimit(2048);
     app.setOrganizationName(QStringLiteral("cutefishos"));
     app.setWindowIcon(QIcon::fromTheme("terminal"));
+
+    // Trim freed memory after startup and periodically
+    QTimer::singleShot(2000, []() {
+#ifdef __GLIBC__
+        malloc_trim(0);
+#endif
+    });
+
+    QTimer *trimTimer = new QTimer(&app);
+    trimTimer->setInterval(45000);
+    QObject::connect(trimTimer, &QTimer::timeout, []() {
+#ifdef __GLIBC__
+        malloc_trim(0);
+#endif
+    });
+    trimTimer->start();
 
     // Everything after -e is the command and its own options, so it is split
     // off before the parser sees it.
